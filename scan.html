@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner de Notas Fiscais</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #preview { max-width: 100%; margin: 20px auto; display: none; }
+    </style>
+</head>
+<body>
+    <h1>Scanner de Notas Fiscais</h1>
+    <video id="camera" autoplay playsinline></video>
+    <button onclick="takePhoto()">Tirar Foto</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <img id="preview" src="" alt="Pré-visualização da Nota">
+    <p id="result">Resultado:</p>
+    
+    <script>
+        const video = document.getElementById('camera');
+        const canvas = document.getElementById('canvas');
+        const preview = document.getElementById('preview');
+        const result = document.getElementById('result');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Erro ao acessar a câmera: ", err);
+            });
+
+        function takePhoto() {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/png');
+            preview.src = imageData;
+            preview.style.display = 'block';
+
+            Tesseract.recognize(imageData, 'por', {
+                logger: m => console.log(m)
+            }).then(({ data: { text } }) => {
+                result.innerText = `Resultado: ${text}`;
+            });
+        }
+    </script>
+</body>
+</html>
