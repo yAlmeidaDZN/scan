@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner de Nota Fiscal</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <img src="Capturar NF.png" class="logo">
+        <button class="button" onclick="document.getElementById('cameraInput').click()">Capturar NF</button>
+        <button class="button secondary" onclick="abrirHistorico()">Histórico de NFs</button>
+        <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display: none;" onchange="processarImagem(event)">
+        <img id="imagemPreview" class="preview">    
+    </div>
+
+    <script>
+        function processarImagem(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imagem = e.target.result;
+                document.getElementById('imagemPreview').src = imagem;
+                document.getElementById('imagemPreview').style.display = 'block';
+                processarOCR(imagem);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function processarOCR(imagem) {
+            Tesseract.recognize(imagem, 'por', {
+                logger: m => console.log(m)
+            }).then(({ data: { text } }) => {
+                const numeroPedido = extrairNumeroPedido(text);
+                gerarPDF(imagem, numeroPedido);
+            });
+        }
+
+        function extrairNumeroPedido(texto) {
+            const regexBloco = /(dados adicionais|informações complementares)([\s\S]*?)(reservado ao fisco|$)/i;
+            const matchBloco = texto.match(regexBloco);
+            if (matchBloco) {
+                const blocoTexto = matchBloco[2];
+                const regexPedido = /\b\d{8}\b/g;
+                const encontrados = blocoTexto.match(regexPedido);
+                if (encontrados) return encontrados[0];
+            }
+            return 'Não encontrado';
+        }
+
+        function gerarPDF(imagem, numeroPedido) {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF();
+            const dataEscaneamento = new Date().toLocaleString();
+            
+            pdf.text(`Data do Escaneamento: ${dataEscaneamento}`, 10, 20);
+            pdf.text(`Número do Pedido: ${numeroPedido}`, 10, 30);
+            
+            pdf.addPage();
+            pdf.addImage(imagem, 'JPEG', 10, 10, 180, 250);
+            
+            const pdfBlob = pdf.output('blob');
+            enviarParaGoogleDrive(pdfBlob, `NotaFiscal_${numeroPedido}.pdf`);
+        }
+
+        function abrirHistorico() {
+            window.open("https://drive.google.com/drive/folders/1YOE7LettI7y6RIxYhszZFR8dXnIYpr8W?usp=drive_link", "_blank");
+        }
+
+        function enviarParaGoogleDrive(blob, fileName) {
+            const form = new FormData();
+            form.append("file", blob, fileName);
+            
+            fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer 18661770744-0i5c6sb4efii6d0u8tilj0uoughf6acr.apps.googleusercontent.com"
+                },
+                body: form
+            }).then(response => response.json())
+            .then(data => console.log("Upload completo: ", data))
+            .catch(error => console.error("Erro no upload: ", error));
+        }
+    </script>
+</body>
+</html>

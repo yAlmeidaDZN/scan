@@ -1,0 +1,38 @@
+/* styles.css */
+.container {
+    position: relative; /* O contêiner deve ter position: relative para que a imagem se posicione em relação a ele */
+    height: 100vh; /* Altura total da tela */
+}
+
+.logo {
+    position: absolute; /* Posiciona a imagem em relação ao contêiner */
+    top: 50%; /* Coloca a imagem no meio da tela */
+    left: 50%; /* Coloca a imagem no meio da tela */
+    transform: translate(-50%, -50%); /* Centraliza a imagem no ponto de interseção */
+    max-width: 100%; /* Garante que a imagem não ultrapasse a largura da tela */
+    height: auto; /* Mantém a proporção da imagem */
+}
+
+.button {
+    opacity: 0; /* Botões invisíveis, mas ainda clicáveis */
+    position: absolute; /* Define a posição absoluta dos botões dentro do contêiner */
+    padding: 50px 150px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.button:first-of-type {
+    top: 350px; /* Ajusta a posição do primeiro botão (Capturar NF) */
+    left: 50%; /* Posiciona o botão no centro */
+    transform: translateX(-50%); /* Centraliza o botão horizontalmente */
+}
+
+.button.secondary {
+    top: 700px; /* Ajusta a posição do segundo botão (Histórico de NFs) */
+    left: 50%; /* Posiciona o botão no centro */
+    transform: translateX(-50%); /* Centraliza o botão horizontalmente */
+}
