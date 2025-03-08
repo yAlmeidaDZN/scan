@@ -1,52 +1,72 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner de Notas Fiscais</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    <title>Scanner de Nota Fiscal</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        #preview { max-width: 100%; margin: 20px auto; display: none; }
+        body { text-align: center; font-family: Arial, sans-serif; }
+        button { margin-top: 10px; padding: 10px; font-size: 16px; }
+        img { width: 100%; max-width: 600px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
-    <h1>Scanner de Notas Fiscais</h1>
-    <video id="camera" autoplay playsinline></video>
-    <button onclick="takePhoto()">Tirar Foto</button>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <img id="preview" src="" alt="Pré-visualização da Nota">
-    <p id="result">Resultado:</p>
-    
+    <h2>Scanner de Nota Fiscal</h2>
+    <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display: none;" onchange="processarImagem(event)">
+    <button onclick="document.getElementById('cameraInput').click()">Capturar Nota Fiscal</button>
+    <br>
+    <img id="imagemPreview">
+
     <script>
-        const video = document.getElementById('camera');
-        const canvas = document.getElementById('canvas');
-        const preview = document.getElementById('preview');
-        const result = document.getElementById('result');
-
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-            })
-            .catch(err => {
-                console.error("Erro ao acessar a câmera: ", err);
-            });
-
-        function takePhoto() {
-            const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        function processarImagem(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            const imageData = canvas.toDataURL('image/png');
-            preview.src = imageData;
-            preview.style.display = 'block';
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imagem = e.target.result;
+                document.getElementById('imagemPreview').src = imagem;
+                document.getElementById('imagemPreview').style.display = 'block';
+                processarOCR(imagem);
+            };
+            reader.readAsDataURL(file);
+        }
 
-            Tesseract.recognize(imageData, 'por', {
+        function processarOCR(imagem) {
+            Tesseract.recognize(imagem, 'por', {
                 logger: m => console.log(m)
             }).then(({ data: { text } }) => {
-                result.innerText = `Resultado: ${text}`;
+                const numeroPedido = extrairNumeroPedido(text);
+                gerarPDF(imagem, numeroPedido);
             });
+        }
+
+        function extrairNumeroPedido(texto) {
+            const linhas = texto.split('\n');
+            for (let i = 0; i < linhas.length; i++) {
+                if (/dados adicionais|informações complementares/i.test(linhas[i])) {
+                    const regex = /\b\d{8}\b/g;
+                    const encontrados = linhas[i].match(regex);
+                    if (encontrados) return encontrados[0];
+                }
+            }
+            return 'Não encontrado';
+        }
+
+        function gerarPDF(imagem, numeroPedido) {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF();
+            const dataEscaneamento = new Date().toLocaleString();
+            
+            pdf.text(`Data do Escaneamento: ${dataEscaneamento}`, 10, 20);
+            pdf.text(`Número do Pedido: ${numeroPedido}`, 10, 30);
+            
+            pdf.addPage();
+            pdf.addImage(imagem, 'JPEG', 10, 10, 180, 250);
+            
+            pdf.save(`NotaFiscal_${numeroPedido}.pdf`);
         }
     </script>
 </body>
